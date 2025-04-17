@@ -1,3 +1,14 @@
+/*
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * XDP-based SSH SYN attempt filter
+ *
+ * This code is licensed under the GNU General Public License v2.0 or later.
+ *
+ * Author：Boyle.Gu
+ *
+ */
+
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
@@ -10,8 +21,8 @@
 
 #define SSH_PORT 22
 #define MAX_ATTEMPTS 5
-#define TIME_WINDOW_NS (60 * 1000000000ULL) // 60秒
-#define BLOCK_TIME_NS (300 * 1000000000ULL) // 300秒封禁
+#define TIME_WINDOW_NS (60 * 1000000000ULL)  /* 60 seconds */
+#define BLOCK_TIME_NS (300 * 1000000000ULL)  /* 300 seconds ban */
 
 struct config {
     __u32 ssh_port;
@@ -57,7 +68,7 @@ int xdp_ssh_filter(struct xdp_md *ctx) {
     void *data_end = (void *)(long)ctx->data_end;
     void *data = (void *)(long)ctx->data;
 
-    // 默认配置（硬编码）
+    // Default configuration
     struct config default_cfg = {
         .ssh_port = SSH_PORT,
         .max_attempts = MAX_ATTEMPTS,
@@ -65,63 +76,58 @@ int xdp_ssh_filter(struct xdp_md *ctx) {
         .block_time_ns = BLOCK_TIME_NS
     };
 
-    // 尝试从 config_map 获取配置
     __u32 config_key = 0;
     struct config *cfg = bpf_map_lookup_elem(&config_map, &config_key);
     if (!cfg) {
-        cfg = &default_cfg; // 使用默认配置
+        cfg = &default_cfg;
     }
 
-    // 解析以太网头
+    // Parse Ethernet header
     struct ethhdr *eth = data;
     if ((void *)(eth + 1) > data_end)
         return XDP_PASS;
 
-    // 只处理 IPv4 数据包
+    //  Only handle IPv4 packets
     if (eth->h_proto != bpf_htons(ETH_P_IP))
         return XDP_PASS;
 
-    // 解析 IP 头
+    // Parse IP header
     struct iphdr *ip = (struct iphdr *)(eth + 1);
     if ((void *)(ip + 1) > data_end)
         return XDP_PASS;
 
-    // 只处理 TCP 流量
+    // Only handle TCP traffic
     if (ip->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
-    // 计算 IP 头部长度并检查边界
     __u8 ip_header_len = ip->ihl * 4;
     if ((void *)ip + ip_header_len + sizeof(struct tcphdr) > data_end)
         return XDP_PASS;
 
-    // 解析 TCP 头
     struct tcphdr *tcp = (struct tcphdr *)((void *)ip + ip_header_len);
     if ((void *)(tcp + 1) > data_end)
         return XDP_PASS;
 
-    // 检查是否是目标端口的 SYN 包（SSH）
+    // Check for SYN packets to the SSH port
     if (tcp->dest == bpf_htons(cfg->ssh_port) && tcp->syn) {
         __u32 src_ip = ip->saddr;
         __u64 now = bpf_ktime_get_ns();
 
-        // 查找或初始化尝试记录
         struct attempt_info *info = bpf_map_lookup_elem(&ssh_attempts, &src_ip);
 
-        // 检查是否在封禁期内
         if (info && now < info->block_until) {
             return XDP_DROP;
         }
 
         struct attempt_info new_info = {0};
         if (info) {
-            // 检查是否在时间窗口内
+
             if (now - info->first_attempt_time <= cfg->time_window_ns) {
                 new_info.count = info->count + 1;
                 new_info.first_attempt_time = info->first_attempt_time;
                 new_info.last_attempt_time = now;
 
-                // 如果超过最大尝试次数，触发事件并丢弃包
+                // Exceeded max attempts: emit event and drop
                 if (new_info.count >= cfg->max_attempts) {
                     new_info.block_until = now + cfg->block_time_ns;
                     struct event evt = {
@@ -133,21 +139,19 @@ int xdp_ssh_filter(struct xdp_md *ctx) {
                     return XDP_DROP;
                 }
             } else {
-                // 时间窗口过期，重置计数器
                 new_info.count = 1;
                 new_info.first_attempt_time = now;
                 new_info.last_attempt_time = now;
                 new_info.block_until = 0;
             }
         } else {
-            // 第一次尝试
             new_info.count = 1;
             new_info.first_attempt_time = now;
             new_info.last_attempt_time = now;
             new_info.block_until = 0;
         }
 
-        // 更新记录
+        // Update the attempt record
         bpf_map_update_elem(&ssh_attempts, &src_ip, &new_info, BPF_ANY);
     }
     return XDP_PASS;
