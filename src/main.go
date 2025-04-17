@@ -222,7 +222,7 @@ func main() {
 	log.Printf("SSH protection started on port %d", port)
 	log.Printf("Settings: %d attempts / %d seconds, ban for %d seconds", maxAttempt, timeWindow, blockTime)
 	log.Println("Press Ctrl+C to stop...")
-	
+
 	for {
 		select {
 		case e := <-protector.EventChannel():
