@@ -96,18 +96,24 @@ func (p *SSHProtector) Attach(ifaceName string, mode string) error {
 	return nil
 }
 
-func (p *SSHProtector) StartEventLoop() error {
-	// 添加调试输出
+func (p *SSHProtector) StartEventLoop(bufferPages int) error {
 	var cfg Config
 	key := uint32(0)
 	if err := p.objs.ConfigMap.Lookup(&key, &cfg); err == nil {
 		log.Printf("Current config: Port=%d, MaxAttempts=%d, TimeWindow=%ds",
 			cfg.SSHPort, cfg.MaxAttempts, cfg.TimeWindowNs/1000000000)
 	}
-	rd, err := perf.NewReader(p.objs.Events, os.Getpagesize()*8)
+
+	pageSize := os.Getpagesize()
+	log.Printf("Perf buffer: %d pages (%d bytes)", bufferPages, bufferPages*pageSize)
+
+	rd, err := perf.NewReader(p.objs.Events, bufferPages*pageSize)
 	if err != nil {
 		return fmt.Errorf("create perf reader: %w", err)
 	}
+
+	var totalLost uint64
+	const warnThreshold = 100 // trigger an alert when 100 dropped events occur consecutively.
 
 	go func() {
 		defer rd.Close()
@@ -127,7 +133,12 @@ func (p *SSHProtector) StartEventLoop() error {
 				}
 
 				if record.LostSamples > 0 {
-					log.Printf("lost %d events", record.LostSamples)
+					totalLost += record.LostSamples
+					log.Printf("WARNING: lost %d events (total lost = %d)", record.LostSamples, totalLost)
+					if totalLost >= warnThreshold {
+						log.Printf("ERROR: total lost samples %d ≥ %d, consider increasing perf buffer size", totalLost, warnThreshold)
+						totalLost = 0
+					}
 					continue
 				}
 
@@ -175,6 +186,7 @@ func main() {
 		timeWindow int
 		mode       string
 		blockTime  int
+		perfPages  int
 	)
 
 	flag.StringVar(&iface, "interface", "", "Network interface to bind (e.g. eth0)")
@@ -184,6 +196,7 @@ func main() {
 	flag.IntVar(&blockTime, "block-time", 300, "Ban duration in seconds (default: 300)")
 	flag.StringVar(&mode, "mode", "generic",
 		"XDP mode: generic (default), native (driver), hw (hardware)")
+	flag.IntVar(&perfPages, "perf-pages", 8, "Perf buffer size in pages (default 8)")
 	flag.Parse()
 
 	if iface == "" {
@@ -212,7 +225,7 @@ func main() {
 		log.Fatalf("failed to attach XDP program: %v", err)
 	}
 
-	if err := protector.StartEventLoop(); err != nil {
+	if err := protector.StartEventLoop(perfPages); err != nil {
 		log.Fatalf("failed to start event loop: %v", err)
 	}
 
