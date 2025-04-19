@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"net"
 	"os"
@@ -18,6 +19,17 @@ import (
 	"github.com/cilium/ebpf/perf"
 	"github.com/cilium/ebpf/rlimit"
 )
+
+var logger *zap.SugaredLogger
+
+func initLogger() {
+	// 生产环境用 NewProduction，开发环境可用 NewDevelopment
+	zapLog, err := zap.NewProduction()
+	if err != nil {
+		panic(fmt.Sprintf("cannot initialize zap logger: %v", err))
+	}
+	logger = zapLog.Sugar()
+}
 
 // Config corresponds to the `config` struct in the BPF program
 type Config struct {
@@ -179,6 +191,9 @@ func intToIP(ip uint32) string {
 }
 
 func main() {
+	initLogger()
+	defer logger.Sync() // flush any buffered logs
+
 	var (
 		iface      string
 		port       int
@@ -200,14 +215,14 @@ func main() {
 	flag.Parse()
 
 	if iface == "" {
-		fmt.Println("You must specify a network interface")
+		logger.Fatal("must specify network interface", "usage", flag.CommandLine)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	protector, err := NewSSHProtector()
 	if err != nil {
-		log.Fatalf("failed to create protector: %v", err)
+		logger.Fatalw("failed to create protector: %v", err)
 	}
 	defer protector.Stop()
 
@@ -218,19 +233,28 @@ func main() {
 		BlockTimeNs:  uint64(blockTime) * 1e9,
 	}
 	if err := protector.Configure(cfg); err != nil {
-		log.Fatalf("failed to configure: %v", err)
+		logger.Fatalw("failed to configure: %v", err)
 	}
 
 	if err := protector.Attach(iface, mode); err != nil {
-		log.Fatalf("failed to attach XDP program: %v", err)
+		logger.Fatalw("failed to attach XDP program: %v", err)
 	}
 
 	if err := protector.StartEventLoop(perfPages); err != nil {
-		log.Fatalf("failed to start event loop: %v", err)
+		logger.Fatalw("failed to start event loop: %v", err)
 	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	logger.Infow("SSH protection started",
+		"port", port,
+		"maxAttempts", maxAttempt,
+		"timeWindow", timeWindow,
+		"blockTime", blockTime,
+		"mode", mode,
+		"perfPages", perfPages,
+	)
 
 	log.Printf("SSH protection started on port %d", port)
 	log.Printf("Settings: %d attempts / %d seconds, ban for %d seconds", maxAttempt, timeWindow, blockTime)
@@ -240,11 +264,11 @@ func main() {
 		select {
 		case e := <-protector.EventChannel():
 			ip := intToIP(e.IP)
-			log.Printf("[%s] Banning IP: %s, Attempts: %d",
+			logger.Infow("[%s] Banning IP: %s, Attempts: %d",
 				time.Now().Format("2006-01-02 15:04:05"), ip, e.Count)
 
 		case <-sigCh:
-			log.Println("\nShutting down XDP program...")
+			logger.Infow("\nShutting down XDP program...")
 			return
 		}
 	}
