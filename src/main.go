@@ -6,7 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go.uber.org/zap"
+
 	"log"
 	"net"
 	"os"
@@ -15,21 +15,11 @@ import (
 	"time"
 
 	"TyrShield/bpf"
+	iouringzap "TyrShield/src/logs"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/perf"
 	"github.com/cilium/ebpf/rlimit"
 )
-
-var logger *zap.SugaredLogger
-
-func initLogger() {
-	// 生产环境用 NewProduction，开发环境可用 NewDevelopment
-	zapLog, err := zap.NewProduction()
-	if err != nil {
-		panic(fmt.Sprintf("cannot initialize zap logger: %v", err))
-	}
-	logger = zapLog.Sugar()
-}
 
 // Config corresponds to the `config` struct in the BPF program
 type Config struct {
@@ -191,8 +181,8 @@ func intToIP(ip uint32) string {
 }
 
 func main() {
-	initLogger()
-	defer logger.Sync() // flush any buffered logs
+	logger := iouringzap.GetLogger()
+	defer iouringzap.CloseGlobal()
 
 	var (
 		iface      string
