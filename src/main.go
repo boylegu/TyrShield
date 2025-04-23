@@ -16,6 +16,7 @@ import (
 func main() {
 	logger := iouringzap.GetLogger()
 	defer iouringzap.CloseGlobal()
+	utils.RunASCIILogo()
 
 	var (
 		iface      string
