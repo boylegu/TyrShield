@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"fmt"
 	"image/png"
-	"log"
 	"os"
 	"strings"
 
@@ -33,7 +33,7 @@ func addBox(lines []string) []string {
 
 func RunASCIILogo() {
 
-	f, _ := os.Open("assets/image/TyrShield_logo.png")
+	f, _ := os.Open("../assets/image/TyrShield_logo.png")
 	defer f.Close()
 	img, _ := png.Decode(f)
 
@@ -47,9 +47,9 @@ func RunASCIILogo() {
 	artLines := strings.Split(ascii, "\n")
 
 	note := []string{
-		"SSH Protector v0.1.0",
+		"TyrShield v" + GetVersion(),
 		"High‑performance SSH protection",
-		"©2025 MIT License",
+		"©2025 MIT License by Boyle.Gu",
 	}
 	boxedNote := addBox(note)
 
@@ -77,6 +77,6 @@ func RunASCIILogo() {
 			notePart = boxedNote[i-noteOffset]
 		}
 
-		log.Println(artPart + padding + notePart)
+		fmt.Println(artPart + padding + notePart)
 	}
 }

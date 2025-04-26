@@ -19,6 +19,8 @@ type IoUringLogger struct {
 	mu   sync.Mutex
 }
 
+var logger *zap.SugaredLogger
+
 // NewIoUringLogger creates a new IoUringLogger that writes to the given
 // path with the specified io_uring queue depth.
 func NewIoUringLogger(path string, queueDepth uint32) (*IoUringLogger, error) {
@@ -80,7 +82,6 @@ type RotateIoUringLogger struct {
 }
 
 // NewRotateIoUringLogger creates a RotateIoUringLogger using the given
-// Go time format pattern (e.g. "/var/log/app-2006-01-02.log").
 func NewRotateIoUringLogger(pattern string, queueDepth uint32) (*RotateIoUringLogger, error) {
 	r := &RotateIoUringLogger{pattern: pattern, queueDepth: queueDepth}
 	if err := r.rotateIfNeeded(); err != nil {
@@ -181,8 +182,20 @@ func InitGlobal(pattern string, queueDepth uint32, level zapcore.Level) error {
 	return initErr
 }
 
+func initLogger() {
+	zapLog, err := zap.NewProduction()
+	if err != nil {
+		panic(fmt.Sprintf("cannot initialize zap logger: %v", err))
+	}
+	logger = zapLog.Sugar()
+}
+
 func GetLogger() *zap.SugaredLogger {
 	return globalSugar
+}
+
+func GetDebugLogger() *zap.SugaredLogger {
+	return logger
 }
 
 func CloseGlobal() error {
@@ -192,8 +205,17 @@ func CloseGlobal() error {
 	return nil
 }
 
+func CloseDebugGlobal() error {
+
+	if logger != nil {
+		return logger.Sync()
+	}
+	return nil
+}
+
 func init() {
 	if err := InitGlobal("/var/log/app-2006-01-02.log", 8, zapcore.InfoLevel); err != nil {
 		panic(fmt.Sprintf("iouringzap 初始化失败: %v", err))
 	}
+	initLogger()
 }
