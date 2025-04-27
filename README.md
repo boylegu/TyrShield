@@ -45,6 +45,9 @@
 
 - Root or sufficient capabilities to load eBPF and attach XDP
 
+## Installation
+
+
 
 ## Usage
 
@@ -83,6 +86,10 @@ sudo ./tyrshield \
 
 Press Ctrl+C to stop and unload XDP.
 
+<p align="center">
+<img src="https://cdn.jsdelivr.net/gh/boylegu/TyrShield/assets/image/tyrshield_show.gif">
+</p>
+
 ## Alternatives 🆚 Comparison
 
 | Tool               | Blocking Layer            | Latency Overhead | CPU Overhead       | Logging Model                          | Configuration        | Language       |
@@ -102,3 +109,15 @@ Press Ctrl+C to stop and unload XDP.
 5. **Dynamic tuning**: adjust perf buffer depth, XDP mode, ban windows, etc. in real time via CLI flags.
 
 If your environment requires the absolute lowest per‑packet overhead and the ability to handle thousands of simultaneous SSH attempts with minimal user‑space cost, **TyrShield** is the ideal choice.
+
+## Contributing
+
+- Fork the repository
+
+- Create a feature branch (git checkout -b feature/foo)
+
+- Commit your changes (git commit -m "feat: add foo")
+
+- Push to your branch (git push origin feature/foo)
+
+- Open a Pull Request
