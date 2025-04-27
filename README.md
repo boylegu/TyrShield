@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/boylegu/TyrShield/assets/image/TyrShield.png">
+<img src="https://cdn.jsdelivr.net/gh/boylegu/TyrShield/assets/images/TyrShield.png">
 </p>
 
 [![go](https://img.shields.io/badge/Go-1.24+-66C9D6)]()
@@ -87,7 +87,7 @@ sudo ./tyrshield \
 Press Ctrl+C to stop and unload XDP.
 
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/boylegu/TyrShield/assets/image/tyrshield_show.gif">
+<img src="https://cdn.jsdelivr.net/gh/boylegu/TyrShield/assets/images/tyrshield_show.gif">
 </p>
 
 ## Alternatives 🆚 Comparison

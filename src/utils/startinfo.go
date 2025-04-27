@@ -33,7 +33,7 @@ func addBox(lines []string) []string {
 
 func RunASCIILogo() {
 
-	f, _ := os.Open("../assets/image/TyrShield_logo.png")
+	f, _ := os.Open("../assets/images/TyrShield_logo.png")
 	defer f.Close()
 	img, _ := png.Decode(f)
 
