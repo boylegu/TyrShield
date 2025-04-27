@@ -46,7 +46,44 @@
 - Root or sufficient capabilities to load eBPF and attach XDP
 
 
-## 🆚 Alternatives & Comparison
+## Usage
+
+```shell
+
+sudo ./tyrshield \
+  -interface eth0 \
+  -port 22 \
+  -max-attempts 5 \
+  -time-window 60 \
+  -block-time 300 \
+  -mode generic \
+  -perf-pages 8
+
+```
+
+- -interface : Network interface to attach XDP (e.g. eth0)
+
+- -port : SSH port to protect (default 22)
+
+- -max-attempts: Max SYN retries in window before ban (default 5)
+
+- -time-window: Window in seconds to count attempts (default 60)
+
+- -block-time : Ban duration in seconds (default 300)
+
+- -mode : XDP attach mode:
+
+- generic : software/compat mode (default)
+
+  - native : driver (offload) mode
+
+  - hw : hardware offload mode
+
+  - perf-pages: Perf buffer size in pages (default 8)
+
+Press Ctrl+C to stop and unload XDP.
+
+## Alternatives 🆚 Comparison
 
 | Tool               | Blocking Layer            | Latency Overhead | CPU Overhead       | Logging Model                          | Configuration        | Language       |
 |--------------------|---------------------------|------------------|--------------------|----------------------------------------|----------------------|----------------|
