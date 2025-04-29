@@ -34,7 +34,6 @@ func main() {
 			defer iouringzap.CloseGlobal()
 
 			if debug == "true" {
-				fmt.Println(debug)
 				logger = iouringzap.GetDebugLogger()
 				defer iouringzap.CloseDebugGlobal()
 			}

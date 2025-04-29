@@ -47,6 +47,11 @@
 
 ## Installation
 
+```shell
+
+go install github.com/boylegu/TyrShield@latest
+
+```
 
 
 ## Usage
@@ -54,29 +59,29 @@
 ```shell
 
 sudo ./tyrshield \
-  -interface eth0 \
-  -port 22 \
-  -max-attempts 5 \
-  -time-window 60 \
-  -block-time 300 \
-  -mode generic \
-  -perf-pages 8
+  --iface eth0 \
+  --port 22 \
+  --max-attempts 5 \
+  --time-window 60 \
+  --block-time 300 \
+  --mode generic \
+  --perf-pages 8
 
 ```
 
-- -interface : Network interface to attach XDP (e.g. eth0)
+- --iface : Network interface to attach XDP (e.g. eth0)
 
-- -port : SSH port to protect (default 22)
+- --port : SSH port to protect (default 22)
 
-- -max-attempts: Max SYN retries in window before ban (default 5)
+- --max-attempts: Max SYN retries in window before ban (default 5)
 
-- -time-window: Window in seconds to count attempts (default 60)
+- --time-window: Window in seconds to count attempts (default 60)
 
-- -block-time : Ban duration in seconds (default 300)
+- --block-time : Ban duration in seconds (default 300)
 
-- -mode : XDP attach mode:
+- --mode : XDP attach mode:
 
-- generic : software/compat mode (default)
+- --generic : software/compat mode (default)
 
   - native : driver (offload) mode
 
