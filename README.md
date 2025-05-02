@@ -14,6 +14,8 @@
 </div>
 
 
+English | [中文](https://github.com/boylegu/TyrShield/blob/main/README_CN.md)
+
 # **High-performance XDP/eBPF SSH Brute Force Protection Tool — TyrShield**
 
 - **Line-speed Filtering**: Discards excessive SYN packets directly at the network card driver layer using XDP, with nearly zero latency and no consumption of regular network stack resources.
